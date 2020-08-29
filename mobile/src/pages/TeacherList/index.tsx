@@ -8,6 +8,8 @@ import api from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import TeacherItem, { Teacher } from '../../components/TeacherItem';
 import { BorderlessButton, RectButton } from 'react-native-gesture-handler';
+import AsyncStorage from '@react-native-community/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 function TeacherList() {
 
@@ -19,11 +21,32 @@ function TeacherList() {
 
     const [teachers, setTeachers] = useState([]);
 
-    function handleToggleFiltersVisible() {
+    const [favorites, setFavorites] = useState<number[]>([]);
+
+    function loadFavorites() {
+        AsyncStorage.getItem('favorites').then(response => {
+            if (response) {
+                const favoritedTeachers = JSON.parse(response);
+                const favoritedTeachersIds = favoritedTeachers.map((teacher: Teacher) => {
+                    return teacher.id;
+                });
+                setFavorites(favoritedTeachersIds);
+            }
+        });
+    }
+
+    useFocusEffect(() => {
+        loadFavorites();
+    });
+
+    function handleToggleFiltersVisible() 
+    {
         setIsFiltersVisible(!isFiltersVisible);
     }
 
-    async function handleFiltersSubmit() {
+    async function handleFiltersSubmit() 
+    {
+        loadFavorites();
         const response = await api.get('classes', {
             params: {
                 subject,
@@ -94,7 +117,13 @@ function TeacherList() {
                 }}
             >
                 {teachers.map((teacher:Teacher) => {
-                    return <TeacherItem key={teacher.id} teacher={teacher} />
+                    return (
+                        <TeacherItem 
+                            key={teacher.id} 
+                            teacher={teacher} 
+                            favorited={favorites.includes(teacher.id)}
+                        />
+                    )
                 })}
             </ScrollView>
         </View>
